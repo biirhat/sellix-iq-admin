@@ -6,8 +6,16 @@ node_modules/
 # Expo
 .expo/
 dist/
-web-build/
-expo-env.d.ts
+.idea/
+npm-debug.log
+yarn-error.log
+
+# Environment variables
+.env
+
+# Supabase
+supabase/functions/_temp/
+supabase/.temp/
 
 # Native
 .kotlin/

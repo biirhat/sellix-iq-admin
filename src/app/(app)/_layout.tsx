@@ -5,7 +5,12 @@ export default function RootLayout() {
   const tabBarBg = useThemeColor("default");
 
   return (
-    <Stack screenOptions={{ headerStyle: { backgroundColor: tabBarBg } }}>
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: tabBarBg },
+        headerTintColor: useThemeColor("foreground"),
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="apptheme"
@@ -13,47 +18,28 @@ export default function RootLayout() {
           headerShown: true,
           title: "App Theme",
           headerBackTitle: " ",
-          headerBackButtonDisplayMode: "minimal"
-        }}
-      />
-      
-      <Stack.Screen
-        name="companies"
-        options={{
-          headerShown: true,
-          title: "Companies",
-          headerBackTitle: " ",
-          headerBackButtonDisplayMode: "minimal"
+          headerBackButtonDisplayMode: "minimal",
         }}
       />
       <Stack.Screen
-        name="company-add"
+        name="company"
         options={{
-          headerShown: true,
-          title: "Add Company",
-          headerBackTitle: " ",
-          headerBackButtonDisplayMode: "minimal"
-        }}
-      />
-      <Stack.Screen
-        name="company-edit"
-        options={{
-          headerShown: true,
-          title: "Add Company",
-          headerBackTitle: " ",
-          headerBackButtonDisplayMode: "minimal"
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="users"
         options={{
-          headerShown: true,
-          title: "Users",
-          headerBackTitle: " ",
-          headerBackButtonDisplayMode: "minimal"
+          headerShown: false,
         }}
       />
-      
+      <Stack.Screen
+        name="employees"
+        options={{
+          headerShown: false,
+        }}
+      />
+      {/* User screens moved into their own layout folder */}
     </Stack>
   );
 }

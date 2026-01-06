@@ -57,6 +57,7 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_url: string | null
           company_id: string | null
           created_at: string | null
           email: string
@@ -65,6 +66,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          avatar_url?: string | null
           company_id?: string | null
           created_at?: string | null
           email: string
@@ -73,6 +75,7 @@ export type Database = {
           username: string
         }
         Update: {
+          avatar_url?: string | null
           company_id?: string | null
           created_at?: string | null
           email?: string
@@ -95,10 +98,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      user_role: "super_admin" | "company_admin" | "driver" | "representative"
+      user_role:
+        | "super_admin"
+        | "company_admin"
+        | "driver"
+        | "representative"
+        | "Worker"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -226,7 +234,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      user_role: ["super_admin", "company_admin", "driver", "representative"],
+      user_role: [
+        "super_admin",
+        "company_admin",
+        "driver",
+        "representative",
+        "Worker",
+      ],
     },
   },
 } as const

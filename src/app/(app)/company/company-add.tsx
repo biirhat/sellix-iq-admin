@@ -1,21 +1,21 @@
-import { useCustomToast } from '@/components/Alert/use-custom-toast';
-import { supabase } from '@/lib/supabase';
-import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { Button, FormField, Switch, TextField } from 'heroui-native';
-import React, { useState } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { useCustomToast } from "@/components/Alert/use-custom-toast";
+import { supabase } from "@/lib/supabase";
+import { Feather } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { Button, FormField, Switch, TextField } from "heroui-native";
+import React, { useState } from "react";
+import { Image, Pressable, ScrollView, View } from "react-native";
 
 export default function AddCompany() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showTopToast, showError, showWarning } = useCustomToast();
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [isActive, setIsActive] = useState(true);
 
   const [localImage, setLocalImage] = useState<string | null>(null);
@@ -31,17 +31,19 @@ export default function AddCompany() {
   /* ---------------- IMAGE PICKER ---------------- */
 
   const pickImage = async () => {
-    const { status } =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (status !== 'granted') {
-      showWarning('Permission required', 'Allow photo access to select an image.');
+    if (status !== "granted") {
+      showWarning(
+        "Permission required",
+        "Allow photo access to select an image."
+      );
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       // use lowercase 'images' to match expected MediaType values
-      mediaTypes: ['images'] as any,
+      mediaTypes: ["images"] as any,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -55,41 +57,6 @@ export default function AddCompany() {
 
   const removeImage = () => setLocalImage(null);
 
-  /* ---------------- IMAGE UPLOAD ---------------- */
-
-  const uploadImage = async (companyId: string) => {
-    if (!localImage) return null;
-
-    const uri = localImage;
-    const fileExt = uri.split('.').pop() || 'jpg';
-    const fileName = `companies/${companyId}/logo.${fileExt}`;
-    const fileType = `image/${fileExt}`;
-
-    // Use FormData to correctly handle the file upload in React Native
-    const formData = new FormData();
-    formData.append('file', {
-      uri,
-      name: fileName,
-      type: fileType,
-    } as any);
-
-    const { error } = await supabase.storage
-      .from('company-logos')
-      // Pass the 'file' from FormData. Supabase client handles the rest.
-      .upload(fileName, formData, {
-        contentType: fileType,
-        upsert: true, // Use upsert to allow overwriting
-      });
-
-    if (error) throw error;
-
-    const { data } = supabase.storage
-      .from('company-logos')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
-  };
-
   /* ---------------- SUBMIT ---------------- */
 
   const validateFields = () => {
@@ -100,7 +67,7 @@ export default function AddCompany() {
     };
     setErrors(newErrors);
     // Return true if there are no errors
-    return !Object.values(newErrors).some(isError => isError);
+    return !Object.values(newErrors).some((isError) => isError);
   };
 
   const handleSubmit = async () => {
@@ -111,45 +78,47 @@ export default function AddCompany() {
     setLoading(true);
 
     try {
-      // Step 1: Create company record to get the ID
-      const { data: newCompany, error: createError } = await supabase
-        .from('companies')
-        .insert({
-          name: name.trim(),
-          phone: phone.trim(),
-          address: address.trim(),
-          is_active: isActive,
-          image_url: '', // Re-add to satisfy DB constraint
-          // owner_id is null for now, to be assigned later
-        })
-        .select('id')
-        .single();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-      if (createError) throw createError;
+      const formData = new FormData();
+      formData.append("name", name.trim());
+      formData.append("phone", phone.trim());
+      formData.append("address", address.trim());
+      formData.append("isActive", String(isActive));
 
-      const companyId = newCompany.id;
-
-      // Step 2: Upload the image using the new company's ID
-      const uploadedUrl = await uploadImage(companyId);
-
-      // Step 3: Update the company with the final image URL
-      if (uploadedUrl) {
-        const { error: updateError } = await supabase
-          .from('companies')
-          .update({ image_url: uploadedUrl })
-          .eq('id', companyId);
-
-        if (updateError) throw updateError;
+      if (localImage) {
+        const uri = localImage;
+        const fileType = "image/jpeg"; // Or determine dynamically
+        const fileName = uri.split("/").pop();
+        formData.append("file", {
+          uri,
+          name: fileName,
+          type: fileType,
+        } as any);
       }
 
-      // Invalidate the query to refetch the list on the previous screen
-      await queryClient.invalidateQueries({ queryKey: ['companies'] });
+      const { data, error } = await supabase.functions.invoke("create-company", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
 
-      showTopToast('Success', 'Company created successfully');
-      router.back(); // Use back() instead of replace()
+      if (error) throw error;
+
+      if (data.success) {
+        await queryClient.invalidateQueries({ queryKey: ["companies"] });
+        showTopToast("Success", "Company created successfully");
+        router.back();
+      } else {
+        throw new Error(data.error || "Failed to create company");
+      }
     } catch (err: any) {
       console.error(err);
-      showError('Error', err.message ?? 'Failed to create company');
+      showError("Error", err.message ?? "Failed to create company");
     } finally {
       setLoading(false);
     }
@@ -158,7 +127,7 @@ export default function AddCompany() {
   /* ---------------- UI ---------------- */
 
   return (
-    <ScrollView className="flex-1 p-4">
+    <ScrollView className="flex-1 p-4 bg-background">
       {/* IMAGE PICKER */}
       <View className="items-center mb-6">
         <View className="relative">
@@ -178,12 +147,15 @@ export default function AddCompany() {
           </Pressable>
 
           {!localImage && (
-            <Pressable
+            <View className="absolute bottom-1 right-1">
+              <Pressable
               onPress={pickImage}
-              className="absolute bottom-1 right-1 bg-primary w-10 h-10 rounded-full items-center justify-center"
-            >
+              className="w-10 h-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: "#4F46E5" }} // Indigo-600
+              >
               <Feather name="plus" size={20} color="white" />
-            </Pressable>
+              </Pressable>
+            </View>
           )}
 
           {localImage && (
@@ -204,7 +176,7 @@ export default function AddCompany() {
           value={name}
           onChangeText={(v) => {
             setName(v);
-            setErrors(prev => ({ ...prev, name: false }));
+            setErrors((prev) => ({ ...prev, name: false }));
           }}
           placeholder="e.g. Acme Corporation"
         />
@@ -219,7 +191,7 @@ export default function AddCompany() {
           value={phone}
           onChangeText={(v) => {
             setPhone(v);
-            setErrors(prev => ({ ...prev, phone: false }));
+            setErrors((prev) => ({ ...prev, phone: false }));
           }}
           placeholder="Company phone number"
           keyboardType="phone-pad"
@@ -235,20 +207,15 @@ export default function AddCompany() {
           value={address}
           onChangeText={(v) => {
             setAddress(v);
-            setErrors(prev => ({ ...prev, address: false }));
+            setErrors((prev) => ({ ...prev, address: false }));
           }}
           placeholder="Company address"
         />
-        <TextField.ErrorMessage>
-          Address is required
-        </TextField.ErrorMessage>
+        <TextField.ErrorMessage>Address is required</TextField.ErrorMessage>
       </TextField>
 
       <View className="my-4">
-        <FormField
-          isSelected={isActive}
-          onSelectedChange={setIsActive}
-        >
+        <FormField isSelected={isActive} onSelectedChange={setIsActive}>
           <View className="flex-1">
             <FormField.Label>Active</FormField.Label>
             <FormField.Description>
@@ -262,14 +229,15 @@ export default function AddCompany() {
           </FormField.Indicator>
         </FormField>
       </View>
+      <View className="mt-4 gap-6">
+        <Button isDisabled={loading} onPress={handleSubmit}>
+          {loading ? "Creating..." : "Create Company"}
+        </Button>
 
-      <Button isDisabled={loading} onPress={handleSubmit}>
-        {loading ? 'Creating...' : 'Create Company'}
-      </Button>
-
-      <Button variant="secondary" onPress={() => router.back()}>
-        Cancel
-      </Button>
+        <Button variant="secondary" onPress={() => router.back()}>
+          Cancel
+        </Button>
+      </View>
     </ScrollView>
   );
 }

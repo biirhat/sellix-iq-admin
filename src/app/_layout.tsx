@@ -1,4 +1,6 @@
-import { AppThemeProvider } from "@/contexts/app-theme-context";
+// import '@/global.css';
+import {
+ AppThemeProvider } from "@/contexts/app-theme-context";
 import { Stack } from "expo-router";
 import { HeroUINativeProvider } from "heroui-native";
 import { ActivityIndicator, StyleSheet } from "react-native";
@@ -20,7 +22,8 @@ function Routes() {
 
   if (isLoading) return <ActivityIndicator color={"red"} style={{ flex: 1 }} />; // or splash screen
   return (
-    <Stack>
+    
+      <Stack>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen
@@ -37,6 +40,8 @@ function Routes() {
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack.Protected>
     </Stack>
+
+
   );
 }
 
